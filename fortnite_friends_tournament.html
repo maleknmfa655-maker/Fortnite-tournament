@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fortnite Reload Solo — Friends Tournament</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    background:
+      radial-gradient(circle at 50% -10%, rgba(0, 210, 255, .22), transparent 35%),
+      linear-gradient(135deg, #10162e 0%, #151044 45%, #07111f 100%);
+    color: #fff;
+  }
+  .wrap { width: min(1050px, 94%); margin: 0 auto; padding: 34px 0 50px; }
+  header { text-align: center; margin-bottom: 26px; }
+  .logo {
+    display: inline-block;
+    font-weight: 1000;
+    font-style: italic;
+    letter-spacing: -3px;
+    font-size: clamp(38px, 7vw, 76px);
+    line-height: .9;
+    text-shadow: 4px 5px 0 #111827, 0 0 22px rgba(0, 220, 255, .28);
+    transform: skew(-7deg);
+  }
+  .subtitle { margin: 12px 0 0; color: #cbd5e1; font-size: 16px; }
+  .badge {
+    display: inline-block; margin-top: 12px; padding: 7px 13px; border-radius: 999px;
+    background: rgba(0, 229, 255, .12); border: 1px solid rgba(0,229,255,.35);
+    color: #67e8f9; font-weight: 800; font-size: 12px; letter-spacing: 1px;
+  }
+  .card {
+    background: rgba(10, 16, 34, .82);
+    border: 1px solid rgba(148,163,184,.18);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.35);
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+  }
+  .topbar {
+    display: flex; gap: 12px; justify-content: space-between; align-items: center;
+    padding: 16px 18px; border-bottom: 1px solid rgba(148,163,184,.14);
+    flex-wrap: wrap;
+  }
+  .rules { color: #cbd5e1; font-size: 14px; }
+  .rules b { color: #fff; }
+  button {
+    border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer;
+    font-weight: 800; color: #06111c; background: #67e8f9;
+  }
+  button.secondary { background: #334155; color: #fff; }
+  button.danger { background: #ef4444; color: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 14px 16px; border-bottom: 1px solid rgba(148,163,184,.10); }
+  th {
+    text-align: left; font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+    color: #94a3b8; background: rgba(2,6,23,.38);
+  }
+  th:first-child, td:first-child { width: 80px; text-align: center; }
+  th:last-child, td:last-child { width: 170px; text-align: center; }
+  tr:hover td { background: rgba(255,255,255,.025); }
+  .rank {
+    width: 36px; height: 36px; display: inline-grid; place-items: center; border-radius: 10px;
+    background: #1e293b; font-weight: 900;
+  }
+  .rank.top { background: #fbbf24; color: #111827; }
+  .rank.second { background: #cbd5e1; color: #111827; }
+  .rank.third { background: #d97706; color: #fff; }
+  .name { font-size: 16px; font-weight: 800; }
+  .empty { color: #64748b; font-weight: 600; }
+  .points {
+    font-size: 22px; font-weight: 1000; color: #67e8f9;
+  }
+  .admin {
+    display: none; padding: 18px; border-bottom: 1px solid rgba(148,163,184,.14);
+    background: rgba(0,229,255,.035);
+  }
+  .admin.open { display: block; }
+  .admin h3 { margin: 0 0 12px; }
+  .admin-grid { display: grid; grid-template-columns: 1fr 150px 150px; gap: 10px; }
+  input {
+    width: 100%; padding: 11px 12px; border-radius: 9px;
+    border: 1px solid #334155; background: #0f172a; color: #fff; outline: none;
+  }
+  input:focus { border-color: #67e8f9; }
+  .admin-row { display: contents; }
+  .save-row { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .note { color: #94a3b8; font-size: 12px; margin-top: 9px; }
+  footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 18px; }
+  @media (max-width: 700px) {
+    th:nth-child(2), td:nth-child(2) { width: auto; }
+    .admin-grid { grid-template-columns: 1fr 110px; }
+    .admin-grid .head-points { display: none; }
+    .admin-grid .name-input { grid-column: 1; }
+    .admin-grid .points-input { grid-column: 2; }
+    th:last-child, td:last-child { width: 110px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">FORTNITE</div>
+    <div class="subtitle">RELOAD SOLO • RANKED • FRIENDS TOURNAMENT</div>
+    <div class="badge">60 MINUTES • 1 KILL = 1 POINT • WIN = 10 POINTS</div>
+  </header>
+
+  <section class="card">
+    <div class="topbar">
+      <div class="rules">
+        <b>Leaderboard</b> — enter the latest scores yourself and press <b>Update Leaderboard</b>.
+      </div>
+      <button onclick="toggleAdmin()">Admin / Edit Scores</button>
+    </div>
+
+    <div id="admin" class="admin">
+      <h3>⚙️ Tournament Control</h3>
+      <div class="admin-grid" id="editor"></div>
+      <div class="save-row">
+        <button onclick="saveScores()">Update Leaderboard</button>
+        <button class="secondary" onclick="resetScores()">Clear All</button>
+      </div>
+      <div class="note">Scores are saved in this browser automatically. You can edit names and total points for all 16 players.</div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th>Total Points</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard"></tbody>
+    </table>
+  </section>
+
+  <footer>Unofficial friends tournament • Not affiliated with Epic Games</footer>
+</div>
+
+<script>
+const KEY = "fortnite_friends_tournament_v1";
+const emptyPlayers = Array.from({length:16}, (_,i) => ({name:"", points:0}));
+
+function load() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(KEY));
+    return Array.isArray(saved) && saved.length === 16 ? saved : emptyPlayers;
+  } catch { return emptyPlayers; }
+}
+let players = load();
+
+function render() {
+  players = players
+    .map((p, i) => ({name: String(p.name || "").trim(), points: Math.max(0, Number(p.points) || 0), slot:i}))
+    .sort((a,b) => b.points - a.points || a.slot - b.slot);
+
+  const tbody = document.getElementById("leaderboard");
+  tbody.innerHTML = players.map((p,i) => {
+    const rankClass = i===0 ? "top" : i===1 ? "second" : i===2 ? "third" : "";
+    return `<tr>
+      <td><span class="rank ${rankClass}">${i+1}</span></td>
+      <td class="name">${escapeHtml(p.name) || '<span class="empty">Player slot available</span>'}</td>
+      <td class="points">${p.points}</td>
+    </tr>`;
+  }).join("");
+}
+
+function renderEditor() {
+  // editor uses stable player slots, so editing doesn't jump around
+  const slots = load();
+  const editor = document.getElementById("editor");
+  editor.innerHTML = `
+    <div style="color:#94a3b8;font-size:12px;font-weight:800;">PLAYER NAME</div>
+    <div style="color:#94a3b8;font-size:12px;font-weight:800;">POINTS</div>
+    <div class="head-points"></div>
+    ${slots.map((p,i) => `
+      <input class="name-input" id="name-${i}" value="${escapeAttr(p.name)}" placeholder="Player ${i+1}">
+      <input class="points-input" id="points-${i}" type="number" min="0" value="${Number(p.points)||0}" placeholder="0">
+      <div class="head-points" style="color:#64748b;font-size:12px;padding-top:11px;">Slot ${i+1}</div>
+    `).join("")}`;
+}
+
+function saveScores() {
+  const slots = Array.from({length:16}, (_,i) => ({
+    name: document.getElementById(`name-${i}`).value,
+    points: Number(document.getElementById(`points-${i}`).value) || 0
+  }));
+  localStorage.setItem(KEY, JSON.stringify(slots));
+  players = slots;
+  render();
+  alert("Leaderboard updated!");
+}
+
+function resetScores() {
+  if (!confirm("Clear all 16 player names and scores?")) return;
+  localStorage.setItem(KEY, JSON.stringify(emptyPlayers));
+  players = emptyPlayers;
+  renderEditor();
+  render();
+}
+
+function toggleAdmin() {
+  const panel = document.getElementById("admin");
+  panel.classList.toggle("open");
+  if (panel.classList.contains("open")) renderEditor();
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+render();
+</script>
+</body>
+</html>
