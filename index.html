@@ -72,9 +72,7 @@
   .rank.third { background: #d97706; color: #fff; }
   .name { font-size: 16px; font-weight: 800; }
   .empty { color: #64748b; font-weight: 600; }
-  .points {
-    font-size: 22px; font-weight: 1000; color: #67e8f9;
-  }
+  .points { font-size: 22px; font-weight: 1000; color: #67e8f9; }
   .admin {
     display: none; padding: 18px; border-bottom: 1px solid rgba(148,163,184,.14);
     background: rgba(0,229,255,.035);
@@ -87,135 +85,375 @@
     border: 1px solid #334155; background: #0f172a; color: #fff; outline: none;
   }
   input:focus { border-color: #67e8f9; }
-  .admin-row { display: contents; }
   .save-row { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
   .note { color: #94a3b8; font-size: 12px; margin-top: 9px; }
+  .login-box {
+    display: none; margin-bottom: 14px; padding: 14px;
+    border: 1px solid #334155; border-radius: 12px;
+  }
+  .login-box.open { display: block; }
+  .login-box input { margin-bottom: 8px; }
   footer { text-align: center; color: #64748b; font-size: 12px; margin-top: 18px; }
+
   @media (max-width: 700px) {
-    th:nth-child(2), td:nth-child(2) { width: auto; }
     .admin-grid { grid-template-columns: 1fr 110px; }
-    .admin-grid .head-points { display: none; }
-    .admin-grid .name-input { grid-column: 1; }
-    .admin-grid .points-input { grid-column: 2; }
+    .head-points { display: none; }
     th:last-child, td:last-child { width: 110px; }
   }
 </style>
 </head>
+
 <body>
 <div class="wrap">
-  <header>
-    <div class="logo">FORTNITE</div>
-    <div class="subtitle">RELOAD SOLO • RANKED • FRIENDS TOURNAMENT</div>
-    <div class="badge">60 MINUTES • 1 KILL = 1 POINT • WIN = 10 POINTS</div>
-  </header>
 
-  <section class="card">
-    <div class="topbar">
-      <div class="rules">
-        <b>Leaderboard</b> — enter the latest scores yourself and press <b>Update Leaderboard</b>.
-      </div>
-      <button onclick="toggleAdmin()">Admin / Edit Scores</button>
+<header>
+  <div class="logo">FORTNITE</div>
+  <div class="subtitle">RELOAD SOLO • RANKED • FRIENDS TOURNAMENT</div>
+  <div class="badge">60 MINUTES • 1 KILL = 1 POINT • WIN = 10 POINTS</div>
+</header>
+
+<section class="card">
+
+  <div class="topbar">
+    <div class="rules">
+      <b>Leaderboard</b> — live scores update for everyone.
+    </div>
+    <button onclick="toggleAdmin()">Admin / Edit Scores</button>
+  </div>
+
+  <div id="admin" class="admin">
+
+    <h3>⚙️ Tournament Control</h3>
+
+    <div id="loginBox" class="login-box">
+      <input id="email" type="email" placeholder="Admin email">
+      <input id="password" type="password" placeholder="Admin password">
+      <button onclick="loginAdmin()">Log In</button>
+      <div class="note">Only the tournament administrator can edit scores.</div>
     </div>
 
-    <div id="admin" class="admin">
-      <h3>⚙️ Tournament Control</h3>
+    <div id="editorArea" style="display:none;">
+
       <div class="admin-grid" id="editor"></div>
+
       <div class="save-row">
         <button onclick="saveScores()">Update Leaderboard</button>
         <button class="secondary" onclick="resetScores()">Clear All</button>
+        <button class="danger" onclick="logoutAdmin()">Log Out</button>
       </div>
-      <div class="note">Scores are saved in this browser automatically. You can edit names and total points for all 16 players.</div>
+
+      <div class="note">
+        Changes are saved online and automatically appear for everyone.
+      </div>
+
     </div>
+  </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Player</th>
-          <th>Total Points</th>
-        </tr>
-      </thead>
-      <tbody id="leaderboard"></tbody>
-    </table>
-  </section>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Player</th>
+        <th>Total Points</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard"></tbody>
+  </table>
 
-  <footer>Unofficial friends tournament • Not affiliated with Epic Games</footer>
+</section>
+
+<footer>
+  Unofficial friends tournament • Not affiliated with Epic Games
+</footer>
+
 </div>
 
-<script>
-const KEY = "fortnite_friends_tournament_v1";
-const emptyPlayers = Array.from({length:16}, (_,i) => ({name:"", points:0}));
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-database-compat.js"></script>
 
-function load() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(KEY));
-    return Array.isArray(saved) && saved.length === 16 ? saved : emptyPlayers;
-  } catch { return emptyPlayers; }
-}
-let players = load();
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCOKEy1wCXgtCb692sCwp1RPJqHB4-MAd4",
+  authDomain: "fortnite-friends-tournament.firebaseapp.com",
+  databaseURL: "https://fortnite-friends-tournament-default-rtdb.firebaseio.com",
+  projectId: "fortnite-friends-tournament",
+  storageBucket: "fortnite-friends-tournament.firebasestorage.app",
+  messagingSenderId: "286853887910",
+  appId: "1:286853887910:web:fe68558543c2025d98c167",
+  measurementId: "G-MVQXTTYSZ7"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.database();
+const playersRef = db.ref("tournament/players");
+
+const emptyPlayers =
+  Array.from({length:16}, () => ({name:"", points:0}));
+
+let players = emptyPlayers;
 
 function render() {
-  players = players
-    .map((p, i) => ({name: String(p.name || "").trim(), points: Math.max(0, Number(p.points) || 0), slot:i}))
+
+  const sorted = players
+    .map((p,i) => ({
+      name: String(p.name || "").trim(),
+      points: Math.max(0, Number(p.points) || 0),
+      slot: i
+    }))
     .sort((a,b) => b.points - a.points || a.slot - b.slot);
 
-  const tbody = document.getElementById("leaderboard");
-  tbody.innerHTML = players.map((p,i) => {
-    const rankClass = i===0 ? "top" : i===1 ? "second" : i===2 ? "third" : "";
-    return `<tr>
-      <td><span class="rank ${rankClass}">${i+1}</span></td>
-      <td class="name">${escapeHtml(p.name) || '<span class="empty">Player slot available</span>'}</td>
-      <td class="points">${p.points}</td>
-    </tr>`;
-  }).join("");
+  document.getElementById("leaderboard").innerHTML =
+    sorted.map((p,i) => {
+
+      const rankClass =
+        i === 0 ? "top" :
+        i === 1 ? "second" :
+        i === 2 ? "third" : "";
+
+      return `
+        <tr>
+          <td>
+            <span class="rank ${rankClass}">
+              ${i + 1}
+            </span>
+          </td>
+
+          <td class="name">
+            ${escapeHtml(p.name) ||
+              '<span class="empty">Player slot available</span>'}
+          </td>
+
+          <td class="points">
+            ${p.points}
+          </td>
+        </tr>
+      `;
+
+    }).join("");
 }
 
 function renderEditor() {
-  // editor uses stable player slots, so editing doesn't jump around
-  const slots = load();
+
   const editor = document.getElementById("editor");
+
   editor.innerHTML = `
-    <div style="color:#94a3b8;font-size:12px;font-weight:800;">PLAYER NAME</div>
-    <div style="color:#94a3b8;font-size:12px;font-weight:800;">POINTS</div>
+
+    <div style="color:#94a3b8;font-size:12px;font-weight:800;">
+      PLAYER NAME
+    </div>
+
+    <div style="color:#94a3b8;font-size:12px;font-weight:800;">
+      POINTS
+    </div>
+
     <div class="head-points"></div>
-    ${slots.map((p,i) => `
-      <input class="name-input" id="name-${i}" value="${escapeAttr(p.name)}" placeholder="Player ${i+1}">
-      <input class="points-input" id="points-${i}" type="number" min="0" value="${Number(p.points)||0}" placeholder="0">
-      <div class="head-points" style="color:#64748b;font-size:12px;padding-top:11px;">Slot ${i+1}</div>
-    `).join("")}`;
+
+    ${players.map((p,i) => `
+
+      <input
+        class="name-input"
+        id="name-${i}"
+        value="${escapeAttr(p.name || "")}"
+        placeholder="Player ${i + 1}"
+      >
+
+      <input
+        class="points-input"
+        id="points-${i}"
+        type="number"
+        min="0"
+        value="${Number(p.points) || 0}"
+        placeholder="0"
+      >
+
+      <div
+        class="head-points"
+        style="color:#64748b;font-size:12px;padding-top:11px;"
+      >
+        Slot ${i + 1}
+      </div>
+
+    `).join("")}
+  `;
 }
 
-function saveScores() {
-  const slots = Array.from({length:16}, (_,i) => ({
-    name: document.getElementById(`name-${i}`).value,
-    points: Number(document.getElementById(`points-${i}`).value) || 0
-  }));
-  localStorage.setItem(KEY, JSON.stringify(slots));
-  players = slots;
-  render();
-  alert("Leaderboard updated!");
-}
+playersRef.on("value", snapshot => {
 
-function resetScores() {
-  if (!confirm("Clear all 16 player names and scores?")) return;
-  localStorage.setItem(KEY, JSON.stringify(emptyPlayers));
-  players = emptyPlayers;
-  renderEditor();
+  const data = snapshot.val();
+
+  if (Array.isArray(data) && data.length === 16) {
+    players = data;
+  } else {
+    players = emptyPlayers;
+  }
+
   render();
-}
+
+  if (auth.currentUser) {
+    renderEditor();
+  }
+});
 
 function toggleAdmin() {
+
   const panel = document.getElementById("admin");
+
   panel.classList.toggle("open");
-  if (panel.classList.contains("open")) renderEditor();
+
+  if (!panel.classList.contains("open")) {
+    return;
+  }
+
+  if (auth.currentUser) {
+
+    document.getElementById("loginBox")
+      .classList.remove("open");
+
+    document.getElementById("editorArea")
+      .style.display = "block";
+
+    renderEditor();
+
+  } else {
+
+    document.getElementById("loginBox")
+      .classList.add("open");
+
+    document.getElementById("editorArea")
+      .style.display = "none";
+  }
+}
+
+async function loginAdmin() {
+
+  const email =
+    document.getElementById("email").value.trim();
+
+  const password =
+    document.getElementById("password").value;
+
+  try {
+
+    await auth.signInWithEmailAndPassword(
+      email,
+      password
+    );
+
+  } catch (error) {
+
+    alert(
+      "Login failed. Check your admin email and password."
+    );
+  }
+}
+
+auth.onAuthStateChanged(user => {
+
+  if (user) {
+
+    document.getElementById("loginBox")
+      .classList.remove("open");
+
+    document.getElementById("editorArea")
+      .style.display = "block";
+
+    renderEditor();
+
+  } else {
+
+    document.getElementById("loginBox")
+      .classList.add("open");
+
+    document.getElementById("editorArea")
+      .style.display = "none";
+  }
+});
+
+async function saveScores() {
+
+  if (!auth.currentUser) {
+    alert("Please log in as admin first.");
+    return;
+  }
+
+  const slots =
+    Array.from({length:16}, (_,i) => ({
+
+      name:
+        document.getElementById(`name-${i}`)
+          .value.trim(),
+
+      points:
+        Number(
+          document.getElementById(`points-${i}`).value
+        ) || 0
+
+    }));
+
+  try {
+
+    await playersRef.set(slots);
+
+    alert(
+      "Leaderboard updated for everyone!"
+    );
+
+  } catch (error) {
+
+    alert(
+      "Could not save the leaderboard."
+    );
+  }
+}
+
+async function resetScores() {
+
+  if (!auth.currentUser) {
+    return;
+  }
+
+  if (!confirm(
+    "Clear all 16 player names and scores?"
+  )) {
+    return;
+  }
+
+  await playersRef.set(emptyPlayers);
+}
+
+async function logoutAdmin() {
+  await auth.signOut();
 }
 
 function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  return String(s).replace(
+    /[&<>"']/g,
+
+    c => ({
+      '&':'&amp;',
+      '<':'&lt;',
+      '>':'&gt;',
+      '"':'&quot;',
+      "'":'&#39;'
+    }[c])
+  );
 }
-function escapeAttr(s) { return escapeHtml(s); }
+
+function escapeAttr(s) {
+  return escapeHtml(s);
+}
 
 render();
+
 </script>
+
 </body>
+</html>
+</html>
 </html>
